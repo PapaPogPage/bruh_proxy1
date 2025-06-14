@@ -1,22 +1,22 @@
-const express = require('express');
-const { createProxyMiddleware } = require('http-proxy-middleware');
+const http = require('http');
+const httpProxy = require('http-proxy');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+// Create proxy server with target to Shell Shockers (or any target)
+const proxy = httpProxy.createProxyServer({
+  target: 'http://shellshockers.io',
+  ws: true // Enable WebSocket proxying
+});
 
-// Proxy everything except root '/'
-app.use('/*', createProxyMiddleware({
-  target: 'https://shellshock.io',
-  changeOrigin: true,
-  ws: true, // Enable websocket proxying for games
-  pathRewrite: {
-    '^/': '/', // Keep the path as-is
-  },
-  onProxyReq: (proxyReq, req, res) => {
-    // Add any headers if needed here
-  }
-}));
+const server = http.createServer((req, res) => {
+  proxy.web(req, res);
+});
 
-app.listen(PORT, () => {
+// Handle WebSocket upgrade requests
+server.on('upgrade', (req, socket, head) => {
+  proxy.ws(req, socket, head);
+});
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
   console.log(`Proxy server running on port ${PORT}`);
 });
